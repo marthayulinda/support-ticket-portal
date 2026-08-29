@@ -39,7 +39,6 @@ export default function Index({ auth, tickets, organizations, filters }) {
         const newFilters = { ...currentFilters, [key]: value };
         setCurrentFilters(newFilters);
         
-        // Hapus filter yang bernilai kosong dari parameter URL agar rapi
         const queryParams = Object.fromEntries(Object.entries(newFilters).filter(([_, v]) => v !== ''));
         
         router.get(route('agent.tickets.index'), queryParams, { preserveState: true });

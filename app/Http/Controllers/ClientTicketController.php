@@ -34,15 +34,14 @@ class ClientTicketController extends Controller
             'priority' => 'required|in:low,normal,high',
         ]);
 
-        // Simpan tiket baru. 
-        // Ingat, 'sla_deadline' akan diisi otomatis oleh Model Event yang kita buat di Fase 2!
+        // Simpan tiket baru.
         Ticket::create([
             'organization_id' => $request->user()->organization_id,
             'user_id' => $request->user()->id,
             'title' => $validated['title'],
             'description' => $validated['description'],
             'priority' => $validated['priority'],
-            'status' => 'open', // Status awal pasti 'open'
+            'status' => 'open', // Status awal 'open'
         ]);
 
         return redirect()->route('client.tickets.index');
@@ -69,7 +68,7 @@ class ClientTicketController extends Controller
 
     public function storeReply(Request $request, Ticket $ticket)
     {
-        // 1. Otorisasi: Pastikan client hanya bisa membalas tiket perusahaannya sendiri
+        // 1. Otorisasi: client hanya bisa membalas tiket perusahaannya sendiri
         Gate::authorize('view', $ticket);
 
         // 2. Validasi
@@ -81,7 +80,7 @@ class ClientTicketController extends Controller
         $ticket->replies()->create([
             'user_id' => $request->user()->id,
             'body' => $validated['body'],
-            'is_internal' => false, // Client DIPASTIKAN tidak bisa membuat internal note
+            'is_internal' => false, // Client tidak bisa membuat internal note
         ]);
 
         // (Opsional) Jika tiket sedang 'resolved', ubah kembali menjadi 'open' 

@@ -8,9 +8,8 @@ export default function Show({ auth, ticket }) {
 
     const submitReply = (e) => {
         e.preventDefault();
-        // Nanti kita akan buat route ini di web.php dan controllernya
         post(route('client.tickets.reply', ticket.id), {
-            onSuccess: () => reset('body'), // Kosongkan form jika berhasil
+            onSuccess: () => reset('body'),
         });
     };
 

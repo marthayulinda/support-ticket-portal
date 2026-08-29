@@ -64,7 +64,7 @@ class AgentTicketController extends Controller
             'assigned_to' => 'required|exists:users,id',
         ]);
 
-        // Pastikan user yang dipilih benar-benar seorang agent
+        // user yang dipilih adalah seorang agent
         $agent = User::where('role', 'agent')->findOrFail($validated['assigned_to']);
 
         $newStatus = $ticket->status === 'open' ? 'in_progress' : $ticket->status;

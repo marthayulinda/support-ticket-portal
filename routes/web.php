@@ -44,7 +44,6 @@ Route::middleware(['auth'])->prefix('client')->group(function () {
 Route::middleware(['auth'])->prefix('agent')->group(function () {
     Route::get('/tickets', [AgentTicketController::class, 'index'])->name('agent.tickets.index');
     Route::get('/tickets/{ticket}', [AgentTicketController::class, 'show'])->name('agent.tickets.show');
-    // Nanti kita tambah route update status & assign di sini
     Route::post('/tickets/{ticket}/reply', [AgentTicketController::class, 'storeReply'])->name('agent.tickets.reply');
     Route::patch('/tickets/{ticket}/update', [AgentTicketController::class, 'updateTicket'])->name('agent.tickets.update');
     Route::patch('/tickets/{ticket}/assign', [AgentTicketController::class, 'assign'])->name('agent.tickets.assign');
