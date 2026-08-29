@@ -1,58 +1,92 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Support Ticket Portal
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+A Support Ticket Portal prototype built with Laravel 11 and React. This application allows client organizations to submit and track support tickets, and enables internal support agents to manage, prioritize, and resolve them securely.
 
-## About Laravel
+**Author:** Martha Yulinda Lbn Tobing
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+---
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Setup Instructions
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+1. Clone the repository: `git clone https://github.com/marthayulinda/support-ticket-portal`
+2. Install PHP dependencies: `composer install`
+3. Install Node dependencies: `npm install`
+4. Copy the environment file: `cp .env.example .env`
+5. Generate the application key: `php artisan key:generate`
+6. Configure your database credentials in the `.env` file (e.g., MySQL or SQLite).
+7. Run migrations and seed the database: `php artisan migrate:fresh --seed`
+8. Compile frontend assets: `npm run dev`
+9. Start the local server: `php artisan serve`
+10. Run tests: `php artisan test`
 
-## Learning Laravel
+### Test Credentials (from Seeder)
+* **Agent:** `agent@envolutions.test` | Password: `password`
+* **Client (Acme Corp):** `client@acme.test` | Password: `password`
+* **Client (Globex Inc):** `client@globex.test` | Password: `password`
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+---
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## 1. Frontend Approach
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+**Choice:** React paired with Inertia.js and Tailwind CSS.
 
-## Agentic Development
+**Why:** The assignment requested a JavaScript frontend consuming data from Laravel, explicitly advising against server-driven UI approaches like Livewire/Volt. 
+I chose Inertia.js because it perfectly aligns with Laravel's conventional MVC architecture. It allows React to render views based on standard Laravel Controller responses (returning JSON data seamlessly under the hood) without the overhead of building a separate, complex API layer or managing client-side state (like Redux). This resulted in a fast, SPA-like user experience while keeping the backend logic strictly inside Laravel. Tailwind CSS was used for rapid, responsive, and clean UI development.
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+## 2. Architecture & Key Design Decisions
 
-```bash
-composer require laravel/boost --dev
+* **Thin Controllers, Fat Models:** Business logic, such as SLA calculation, is kept out of the controllers. I utilized Laravel's Eloquent `creating` model event on the `Ticket` model to automatically calculate and assign the `sla_deadline` before the ticket is inserted into the database.
+* **Dynamic Accessors:** Instead of storing the real-time SLA status (On Track, Due Soon, Overdue) in the database, I used a Laravel Eloquent Accessor (`getSlaStatusAttribute`). This ensures the UI always displays the most accurate status calculated dynamically against the current server time (`Carbon::now()`).
+* **Route Grouping & Separation of Concerns:** Client routes and Agent routes are strictly separated using prefixes and dedicated controllers (`ClientTicketController` vs `AgentTicketController`) to prevent accidental data exposure and maintain clean code boundaries.
 
-php artisan boost:install
-```
+## 3. SLA Rules
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+SLA deadlines are calculated strictly based on the ticket's priority at the time of creation or update.
+* **High Priority:** 4 Hours limit.
+* **Normal Priority:** 24 Hours limit.
+* **Low Priority:** 3 Days limit.
 
-## Contributing
+**SLA UI Indicators:**
+* `On Track`: The deadline is more than 2 hours away.
+* `Due Soon`: The deadline is approaching within the next **2 hours**.
+* `Overdue`: The current time has surpassed the deadline.
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## 4. Roles & Permission Model
 
-## Code of Conduct
+Authentication is handled via standard Laravel Breeze, customized to require an `organization_id` upon registration. Authorization is enforced using **Laravel Policies** and **Gates**.
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+* **Client Users:** 
+  * Tied to a specific `organization_id`.
+  * Policies restrict them to only `view`, `create`, and `reply` to tickets belonging to their organization.
+  * **Visibility Enforcement:** Internal notes (`is_internal = true`) are filtered out at the Eloquent query level within the `ClientTicketController`. This guarantees that internal notes are never passed to the Inertia payload or rendered in the Client's React DOM.
+* **Support Agents:** 
+  * Identified by the `role = 'agent'` column.
+  * Have global read access to all organizations' tickets.
+  * Can update ticket statuses, priorities, assign tickets to themselves or peers, and write `is_internal` replies.
 
-## Security Vulnerabilities
+## 5. Scope of Work
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+**What was implemented:**
+* Full authentication and customized registration (assigning clients to companies).
+* Complete ticket lifecycle (Open -> In Progress -> Resolved -> Closed).
+* Automated SLA calculation and real-time status indication.
+* Role-specific dashboards (Client vs. Agent).
+* Multi-parameter filtering for Agents (by Organization, Status, and Priority).
+* Full conversation threading, including the critical isolation of Internal Notes.
+* Automated Feature Tests covering SLA accuracy, Role isolation, and Internal Note visibility.
 
-## License
+**What was deliberately left out (Timeboxing constraints):**
+* Email/System notifications and Laravel Queues.
+* File attachments for tickets.
+* Advanced text formatting (WYSIWYG editor) for ticket descriptions and replies.
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+---
+
+## 6. Next Steps & Known Limitations
+
+If I were to expand this prototype into a production-ready application, I would focus on the following improvements:
+
+1. **Invitation-Based Registration (Limitation Shortcut):** Currently, the registration page allows public sign-ups where users can freely select an organization from a dropdown. In a real B2B environment, this is a security risk. **Next step:** Disable open registration and implement an Admin-only invitation system, sending secure, tokenized registration links via email.
+2. **SLA Configuration (Refactoring):** I am not entirely satisfied with hardcoding the SLA hours (4h, 24h, 3 days) directly inside the Model. **Next step:** Move these rules into a `configs/sla.php` file or a dedicated database table so administrators can adjust SLA policies without altering the code.
+3. **Audit Trails:** Implement a `ticket_logs` table (perhaps using model observers) to track every state change (e.g., "Agent A changed status from Open to In Progress at [Time]") to maintain a strict historical record.
+4. **Queue & Events:** Implement Laravel Queues to send automated email alerts to clients when a ticket status changes, and to agents when a ticket becomes "Due Soon".
