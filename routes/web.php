@@ -47,7 +47,7 @@ Route::middleware(['auth'])->prefix('agent')->group(function () {
     // Nanti kita tambah route update status & assign di sini
     Route::post('/tickets/{ticket}/reply', [AgentTicketController::class, 'storeReply'])->name('agent.tickets.reply');
     Route::patch('/tickets/{ticket}/update', [AgentTicketController::class, 'updateTicket'])->name('agent.tickets.update');
-    Route::patch('/tickets/{ticket}/assign', [AgentTicketController::class, 'assignToMe'])->name('agent.tickets.assign');
+    Route::patch('/tickets/{ticket}/assign', [AgentTicketController::class, 'assign'])->name('agent.tickets.assign');
 });
 
 require __DIR__ . '/auth.php';

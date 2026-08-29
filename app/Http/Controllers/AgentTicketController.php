@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Ticket;
 use App\Models\Organization;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
@@ -42,12 +43,38 @@ class AgentTicketController extends Controller
 
     public function show(Ticket $ticket)
     {
-        // Load relasi: Agent BISA MELIHAT SEMUA BALASAN (termasuk is_internal = true)
-        $ticket->load(['replies.user', 'user', 'organization', 'assignee']);
+        Gate::authorize('view', $ticket);
+
+        $ticket->load(['user', 'organization', 'assignee', 'replies.user']);
+        
+        // Mengambil semua user yang memiliki role 'agent'
+        $agents = User::where('role', 'agent')->orderBy('name')->get();
 
         return Inertia::render('Agent/Tickets/Show', [
-            'ticket' => $ticket
+            'ticket' => $ticket,
+            'agents' => $agents,
         ]);
+    }
+
+    public function assign(Request $request, Ticket $ticket)
+    {
+        Gate::authorize('update', $ticket);
+
+        $validated = $request->validate([
+            'assigned_to' => 'required|exists:users,id',
+        ]);
+
+        // Pastikan user yang dipilih benar-benar seorang agent
+        $agent = User::where('role', 'agent')->findOrFail($validated['assigned_to']);
+
+        $newStatus = $ticket->status === 'open' ? 'in_progress' : $ticket->status;
+
+        $ticket->update([
+            'assigned_to' => $agent->id,
+            'status' => $newStatus,
+        ]);
+
+        return redirect()->back();
     }
 
     /**
@@ -92,24 +119,6 @@ class AgentTicketController extends Controller
         $ticket->update([
             'status' => $validated['status'],
             'priority' => $validated['priority'],
-        ]);
-
-        return redirect()->back();
-    }
-
-    /**
-     * Agen menugaskan tiket kepada dirinya sendiri
-     */
-    public function assignToMe(Request $request, Ticket $ticket)
-    {
-        Gate::authorize('update', $ticket);
-
-        // Jika status tiket masih 'open', otomatis ubah ke 'in_progress'
-        $newStatus = $ticket->status === 'open' ? 'in_progress' : $ticket->status;
-
-        $ticket->update([
-            'assigned_to' => $request->user()->id,
-            'status' => $newStatus,
         ]);
 
         return redirect()->back();

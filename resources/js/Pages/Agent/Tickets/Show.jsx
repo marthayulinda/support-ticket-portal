@@ -1,7 +1,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, useForm, router } from '@inertiajs/react';
 
-export default function Show({ auth, ticket }) {
+export default function Show({ auth, ticket, agents }) {
     // Form untuk Balasan & Internal Note
     const { data: replyData, setData: setReplyData, post: postReply, processing: replying, reset: resetReply, errors: replyErrors } = useForm({
         body: '',
@@ -12,6 +12,10 @@ export default function Show({ auth, ticket }) {
     const { data: updateData, setData: setUpdateData, patch: patchTicket, processing: updating } = useForm({
         status: ticket.status,
         priority: ticket.priority,
+    });
+
+    const { data: assignData, setData: setAssignData, patch: patchAssign, processing: assigning } = useForm({
+        assigned_to: ticket.assigned_to || auth.user.id,
     });
 
     const submitReply = (e) => {
@@ -28,8 +32,11 @@ export default function Show({ auth, ticket }) {
         });
     };
 
-    const assignToMe = () => {
-        router.patch(route('agent.tickets.assign', ticket.id), {}, { preserveScroll: true });
+    const submitAssign = (e) => {
+        e.preventDefault();
+        patchAssign(route('agent.tickets.assign', ticket.id), {
+            preserveScroll: true,
+        });
     };
 
     // Helpers
@@ -197,28 +204,46 @@ export default function Show({ auth, ticket }) {
 
                             {/* Assignment Box */}
                             <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-                                <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-2">Assignment</h3>
-                                {ticket.assignee ? (
-                                    <div className="flex items-center gap-3">
+                                <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-2 border-b pb-2">Assignment</h3>
+                                {ticket.assignee && (
+                                    <div className="flex items-center gap-3 mb-4 mt-3">
                                         <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-800 font-bold text-xl">
                                             {ticket.assignee.name.charAt(0)}
                                         </div>
                                         <div>
                                             <p className="font-semibold text-gray-900">{ticket.assignee.name}</p>
-                                            <p className="text-xs text-gray-500">Currently handling this ticket</p>
+                                            <p className="text-xs text-gray-500">Current handler</p>
                                         </div>
                                     </div>
-                                ) : (
-                                    <div>
-                                        <p className="text-sm text-gray-600 mb-3">This ticket is currently unassigned.</p>
-                                        <button 
-                                            onClick={assignToMe}
-                                            className="w-full border-2 border-indigo-600 text-indigo-600 py-2 rounded-md hover:bg-indigo-50 transition font-bold"
+                                )}
+
+                                <form onSubmit={submitAssign} className="mt-3">
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                                        {ticket.assignee ? 'Reassign Ticket To' : 'Assign Ticket To'}
+                                    </label>
+                                    <div className="flex flex-col gap-2">
+                                        <select
+                                            value={assignData.assigned_to}
+                                            onChange={(e) => setAssignData('assigned_to', e.target.value)}
+                                            className="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+                                            required
                                         >
-                                            Assign to Me
+                                            <option value="">-- Select Agent --</option>
+                                            {agents.map(agent => (
+                                                <option key={agent.id} value={agent.id}>
+                                                    {agent.name} {agent.id === auth.user.id ? '(Me)' : ''}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <button 
+                                            type="submit"
+                                            disabled={assigning || !assignData.assigned_to}
+                                            className="w-full bg-indigo-600 text-white py-2 rounded-md hover:bg-indigo-700 transition font-medium text-sm disabled:opacity-50 mt-1"
+                                        >
+                                            {assigning ? 'Saving...' : 'Save Assignment'}
                                         </button>
                                     </div>
-                                )}
+                                </form>
                             </div>
 
                         </div>

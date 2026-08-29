@@ -30,6 +30,14 @@ class DatabaseSeeder extends Seeder
             'organization_id' => null, // Agent tidak terikat klien
         ]);
 
+        $agent2 = User::create([
+            'name' => 'Support Agent Siti',
+            'email' => 'agent2@envolutions.test',
+            'password' => $password,
+            'role' => 'agent',
+            'organization_id' => null, // Agent tidak terikat klien
+        ]);
+
         // 3. Buat Akun Client
         $clientAcme = User::create([
             'name' => 'Client Acme',
